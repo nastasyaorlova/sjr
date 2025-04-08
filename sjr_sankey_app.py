@@ -140,9 +140,12 @@ fig.update_layout(
       width=1800,
     plot_bgcolor='rgba(250, 250, 250, 0.9)',
     margin=dict(l=20, r=20, t=10, b=180),
-    autosize=True
+    autosize=True,
+font=dict(
+        size=18,           # 🔹 Размер шрифта узлов
+        color="black"      # 🔹 Цвет текста (опционально)
+    )
 )
-
 # Отображение в Streamlit
 st.plotly_chart(fig, use_container_width=True, config={
     "displayModeBar": False,
