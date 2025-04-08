@@ -3,24 +3,26 @@ import pandas as pd
 import plotly.graph_objects as go
 
 st.set_page_config(layout="wide")
-st.title("Изменение квартилей SJR (2022–2024)")
+st.title("📊 Изменение квартилей SJR (2022–2024)")
 
-@st.cache_data
-def load_data():
-    df_2022 = pd.read_csv('2022.csv', sep=';', usecols=['Sourceid', 'SJR Best Quartile']).assign(Year=2022)
-    df_2023 = pd.read_csv('2023.csv', sep=';', usecols=['Sourceid', 'SJR Best Quartile']).assign(Year=2023)
-    df_2024 = pd.read_csv('2024.csv', sep=';', usecols=['Sourceid', 'SJR Best Quartile']).assign(Year=2024)
-    for df in [df_2022, df_2023, df_2024]:
-        df.rename(columns={'Sourceid': 'Journal ID', 'SJR Best Quartile': 'Quartile'}, inplace=True)
-    return pd.concat([df_2022, df_2023, df_2024], ignore_index=True)
+# Загрузка данных
+df_2022 = pd.read_csv('2022.csv', sep=';', usecols=['Sourceid', 'SJR Best Quartile']).assign(Year=2022)
+df_2023 = pd.read_csv('2023.csv', sep=';', usecols=['Sourceid', 'SJR Best Quartile']).assign(Year=2023)
+df_2024 = pd.read_csv('2024.csv', sep=';', usecols=['Sourceid', 'SJR Best Quartile']).assign(Year=2024)
 
-df = load_data()
+# Переименование и объединение
+for df in [df_2022, df_2023, df_2024]:
+    df.rename(columns={'Sourceid': 'Journal ID', 'SJR Best Quartile': 'Quartile'}, inplace=True)
+
+df = pd.concat([df_2022, df_2023, df_2024], ignore_index=True)
 df = df.drop_duplicates(['Journal ID', 'Year'])
 df['Quartile'] = df['Quartile'].str.upper().str.replace(' ', '')
 
+# Параметры
 years = [2022, 2023, 2024]
 quartiles = ['Q1', 'Q2', 'Q3', 'Q4']
-colors = {
+
+quartile_colors = {
     'Q1': 'rgba(100, 180, 80, 0.8)',
     'Q2': 'rgba(230, 200, 0, 0.8)',
     'Q3': 'rgba(250, 140, 0, 0.8)',
@@ -28,84 +30,111 @@ colors = {
     'Без квартиля': 'rgba(80, 130, 200, 0.8)'
 }
 
-nodes = [f"{year} {q}" for year in years for q in quartiles + ['Без квартиля']]
-node_indices = {name: i for i, name in enumerate(nodes)}
-node_colors = [colors[name.split(' ', 1)[1]] for name in nodes]
+# Узлы
+quartile_nodes = [f"{year} {q}" for year in years for q in quartiles]
+no_quartile_nodes = [f"{year} Без квартиля" for year in years]
+all_nodes = quartile_nodes + no_quartile_nodes
+node_indices = {node: idx for idx, node in enumerate(all_nodes)}
 
-node_x = []
+# Цвета узлов
+node_colors = []
+for node in all_nodes:
+    q = node.split(' ', 1)[1]
+    node_colors.append(quartile_colors.get(q, "rgba(150, 150, 150, 0.6)"))
+
+# Координаты узлов
 node_y = []
-for node in nodes:
-    year = int(node.split()[0])
-    if year == 2022:
-        node_x.append(0.1)
-    elif year == 2023:
-        node_x.append(0.5)
-    elif year == 2024:
-        node_x.append(0.9)
+node_x = []
+for node in all_nodes:
+    year_str = node.split()[0]
+    if year_str == "2022":
+        node_x.append(0.01)
+    elif year_str == "2023":
+        node_x.append(0.3)
+    elif year_str == "2024":
+        node_x.append(0.6)
 
     if "Без квартиля" in node:
-        node_y.append(1.2)
+        node_y.append(1.08)
     elif "Q1" in node:
-        node_y.append(0.1)
+        node_y.append(0.15)
     elif "Q2" in node:
         node_y.append(0.3)
     elif "Q3" in node:
-        node_y.append(0.58)  # немного выше
+        node_y.append(0.5)
     elif "Q4" in node:
-        node_y.append(0.9) 
+        node_y.append(0.83)
 
-links = {'source': [], 'target': [], 'value': [], 'color': []}
-all_ids = df['Journal ID'].unique()
-year_dfs = {year: df[df['Year'] == year].set_index('Journal ID') for year in years}
+# Подготовка связей
+sankey_links = {'source': [], 'target': [], 'value': [], 'color': []}
+journals_2022 = set(df_2022['Journal ID'])
+journals_2023 = set(df_2023['Journal ID'])
+journals_2024 = set(df_2024['Journal ID'])
+all_journal_ids = journals_2022.union(journals_2023).union(journals_2024)
 
-for jid in all_ids:
+for journal_id in all_journal_ids:
+    journal_by_year = {}
+    for year, year_df in zip(years, [df_2022, df_2023, df_2024]):
+        journal_data = year_df[year_df['Journal ID'] == journal_id]
+        if not journal_data.empty:
+            quartile = journal_data['Quartile'].iloc[0]
+            journal_by_year[year] = quartile if quartile in quartiles else 'Без квартиля'
+
     for i in range(len(years) - 1):
-        y1, y2 = years[i], years[i + 1]
-        q1 = year_dfs[y1].loc[jid]['Quartile'] if jid in year_dfs[y1].index else None
-        q2 = year_dfs[y2].loc[jid]['Quartile'] if jid in year_dfs[y2].index else None
+        y1 = years[i]
+        y2 = years[i + 1]
+
+        q1 = journal_by_year.get(y1)
+        q2 = journal_by_year.get(y2)
 
         if not q1:
             continue
-        if not q2 or q2 not in quartiles:
-            q2 = 'Без квартиля'
-        if q1 not in quartiles:
-            q1 = 'Без квартиля'
 
         source = f"{y1} {q1}"
-        target = f"{y2} {q2}"
+        target = f"{y2} {q2 if q2 in quartiles else 'Без квартиля'}"
+        color = quartile_colors.get(q1, quartile_colors['Без квартиля'])
 
-        links['source'].append(node_indices[source])
-        links['target'].append(node_indices[target])
-        links['value'].append(1)
-        links['color'].append(colors[q1])
+        sankey_links['source'].append(node_indices[source])
+        sankey_links['target'].append(node_indices[target])
+        sankey_links['value'].append(1)
+        sankey_links['color'].append(color)
 
-link_df = pd.DataFrame(links)
-link_df = link_df.groupby(['source', 'target', 'color']).agg({'value': 'sum'}).reset_index()
+# Группировка и сортировка
+links_df = pd.DataFrame(sankey_links)
+links_df = links_df.groupby(['source', 'target', 'color']).agg({'value': 'sum'}).reset_index()
+links_df = links_df.sort_values('value', ascending=False)
 
+# Построение Sankey-диаграммы
 fig = go.Figure(go.Sankey(
     arrangement="fixed",
     node=dict(
-        pad=10,
-        thickness=15,
+        pad=20,
+        thickness=20,
         line=dict(color="black", width=0.5),
-        label=nodes,
+        label=all_nodes,
         color=node_colors,
         x=node_x,
         y=node_y
     ),
     link=dict(
-        source=link_df['source'],
-        target=link_df['target'],
-        value=link_df['value'],
-        color=link_df['color'],
+        source=links_df['source'],
+        target=links_df['target'],
+        value=links_df['value'],
+        color=links_df['color'],
         hovertemplate='%{source.label} → %{target.label}<br>Журналов: %{value:.0f}<extra></extra>',
-        hoverinfo="skip"
+        hoverinfo='none'
     )
 ))
 
 fig.update_layout(
+    title_text="Изменение квартилей SJR (2022–2024)",
+    title_x=0.5,  # Центрируем заголовок
+    font_size=18,
     height=1000,
-    plot_bgcolor='rgba(255,255,255,1)'
+    width=1800,
+    plot_bgcolor='rgba(250, 250, 250, 0.9)',
+    margin=dict(l=10, r=0, t=150, b=30)  # поднято вверх
 )
 
+# Отображение в Streamlit
 st.plotly_chart(fig, use_container_width=True)
