@@ -8,7 +8,9 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
-st.title("Изменение квартилей SJR (2022–2024)")
+#st.title("Изменение квартилей SJR (2022–2024)")
+st.markdown("<h1 style='text-align: center;'>Изменение квартилей SJR (2022–2024)</h1>", unsafe_allow_html=True)
+
 
 # Убираем Streamlit-заголовок (если не нужен, можно закомментировать)
 # st.title("Изменение квартилей SJR (2022–2024)")
