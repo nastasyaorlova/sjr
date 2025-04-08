@@ -147,7 +147,8 @@ fig.update_layout(
     plot_bgcolor='rgba(250, 250, 250, 0.9)',
     margin=dict(l=20, r=20, t=10, b=20),  # Уменьшаем отступы
     autosize=True,       # Позволяем Streamlit автоматически масштабировать график
-    hovermode=False      # Глобально отключаем режим наведения
+    hovertemplate='%{source.label} → %{target.label}<br>Журналов: %{value:.0f}<extra></extra>'
+     # Глобально включаем режим наведения
 )
 
 # Создаем контейнер на всю ширину для диаграммы
