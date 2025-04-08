@@ -43,20 +43,16 @@ for node in nodes:
     elif year == 2024:
         node_x.append(0.9)
 
-    if node.endswith("Q1"):
-        node_y.append(0.05)
-    elif node.endswith("Q2"):
-        node_y.append(0.20)
-    elif node.endswith("Q3"):
-        node_y.append(0.40)
-    elif node.endswith("Q4"):
-        node_y.append(0.60)
-    elif node == "2022 Без квартиля":
-        node_y.append(0.72)
-    elif node == "2023 Без квартиля":
-        node_y.append(0.84)
-    elif node == "2024 Без квартиля":
-        node_y.append(0.96)
+    if "Без квартиля" in node:
+        node_y.append(1.0)
+    elif "Q1" in node:
+        node_y.append(0.1)
+    elif "Q2" in node:
+        node_y.append(0.3)
+    elif "Q3" in node:
+        node_y.append(0.6)
+    elif "Q4" in node:
+        node_y.append(0.8)
 
 links = {'source': [], 'target': [], 'value': [], 'color': []}
 all_ids = df['Journal ID'].unique()
