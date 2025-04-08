@@ -173,6 +173,7 @@ with st.expander("ℹ️ О диаграмме"):
 # ДОБАВЛЯЕМ ТАБЛИЦУ ПОД ДИАГРАММОЙ
 
 # -------------------------------
+# -------------------------------
 # 📊 ДОБАВЛЯЕМ ТАБЛИЦУ ПОД ДИАГРАММОЙ
 # -------------------------------
 
@@ -217,14 +218,34 @@ final_columns = [
 ]
 pivot_df = pivot_df[final_columns]
 
-# Глобальный поиск
-search = st.text_input("🔍 Поиск по таблице (по всем полям):")
-if search:
-    filtered_df = pivot_df[pivot_df.apply(lambda row: search.lower() in row.astype(str).str.lower().to_string(), axis=1)]
-else:
-    filtered_df = pivot_df
+# --------------------------
+# 🔎 Глобальный и по-столбцам поиск
+# --------------------------
 
-# Отображаем
+st.markdown("#### 🔍 Поиск по всей таблице и по отдельным столбцам")
+
+# Сначала глобальный поиск
+global_search = st.text_input("Глобальный поиск по всем полям:")
+
+filtered_df = pivot_df.copy()
+
+if global_search:
+    filtered_df = filtered_df[
+        filtered_df.apply(lambda row: global_search.lower() in row.astype(str).str.lower().to_string(), axis=1)
+    ]
+
+# Теперь фильтрация по каждому столбцу
+for column in filtered_df.columns:
+    col_search = st.text_input(f"Поиск по «{column}»", key=f"search_{column}")
+    if col_search:
+        filtered_df = filtered_df[
+            filtered_df[column].astype(str).str.contains(col_search, case=False, na=False)
+        ]
+
+# 🔁 Заменяем NaN на прочерк
+filtered_df = filtered_df.fillna("–")
+
+# Отображение таблицы
 st.dataframe(filtered_df, use_container_width=True, height=600)
 
 # Кнопка для скачивания
@@ -234,4 +255,3 @@ st.download_button(
     file_name="sjr_quartiles_table.csv",
     mime="text/csv"
 )
-
