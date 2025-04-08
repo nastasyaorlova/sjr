@@ -168,8 +168,8 @@ with st.expander("ℹ️ О диаграмме"):
     """)
 
 
-#import streamlit as st
-#import pandas as pd
+import streamlit as st
+import pandas as pd
 
 # Настройка страницы
 st.set_page_config(
