@@ -133,9 +133,8 @@ fig.update_layout(
     height=1000,
     width=1800,
     plot_bgcolor='rgba(250, 250, 250, 0.9)',
-    margin=dict(l=10, r=0, t=150, b=30)
+    margin=dict(l=50, r=50, t=120, b=50)
 )
 
-
-st.plotly_chart(fig, use_container_width=True)
-
+# Отображение в Streamlit (не сжимается)
+st.plotly_chart(fig)
