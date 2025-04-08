@@ -172,26 +172,30 @@ with st.expander("ℹ️ О диаграмме"):
 
 # ДОБАВЛЯЕМ ТАБЛИЦУ ПОД ДИАГРАММОЙ
 # -------------------------------
-# 📋 ТАБЛИЦА: SJR с поиском и нумерацией
+# -------------------------------
+# 📋 ТАБЛИЦА: SJR по годам + поиск + нумерация
 # -------------------------------
 
 st.markdown("### 📋 Таблица: квартиль по годам для каждого журнала")
 
-# Загружаем
+# Загрузка всех нужных столбцов
 cols = ['Sourceid', 'Title', 'Issn', 'Publisher', 'SJR Best Quartile', 'Areas']
 df_2022_full = pd.read_csv('2022.csv', sep=';', usecols=cols).assign(Year=2022)
 df_2023_full = pd.read_csv('2023.csv', sep=';', usecols=cols).assign(Year=2023)
 df_2024_full = pd.read_csv('2024.csv', sep=';', usecols=cols).assign(Year=2024)
 
+# Объединение
 df_full = pd.concat([df_2022_full, df_2023_full, df_2024_full], ignore_index=True)
 df_full.rename(columns={'Sourceid': 'Journal ID', 'SJR Best Quartile': 'Quartile'}, inplace=True)
 df_full['Quartile'] = df_full['Quartile'].str.upper().str.replace(' ', '')
 
+# Pivot-таблица: оставляем все журналы, даже если был один год
 pivot_df = df_full.pivot_table(
     index=['Journal ID', 'Title', 'Issn', 'Publisher', 'Areas'],
     columns='Year',
     values='Quartile',
-    aggfunc='first'
+    aggfunc='first',
+    fill_value=""  # ❗️важно — чтобы не было NaN
 ).reset_index()
 
 pivot_df.columns.name = None
@@ -201,16 +205,15 @@ pivot_df.rename(columns={
     2024: 'Best Q 2024'
 }, inplace=True)
 
-# Финальные колонки
 pivot_df = pivot_df[[
     'Journal ID', 'Title', 'Issn', 'Publisher',
     'Best Q 2022', 'Best Q 2023', 'Best Q 2024',
     'Areas'
 ]]
 
-# Глобальный поиск (сначала!)
-st.markdown("#### 🔍 Глобальный поиск по всей таблице")
-global_search = st.text_input("Введите текст для поиска по всем полям:")
+# 🟦 Глобальный поиск (вверху)
+st.markdown("#### 🔍 Глобальный поиск")
+global_search = st.text_input("Поиск по всем полям таблицы:")
 
 filtered_df = pivot_df.copy()
 if global_search:
@@ -218,31 +221,34 @@ if global_search:
         filtered_df.apply(lambda row: global_search.lower() in row.astype(str).str.lower().to_string(), axis=1)
     ]
 
-# Поиск по каждому столбцу — горизонтально
-st.markdown("#### 🔎 Поиск по столбцам")
+# 🔎 Поиск по каждому столбцу (горизонтально)
+st.markdown("#### 🔎 Поиск по каждому столбцу")
 columns = filtered_df.columns.tolist()
-search_inputs = st.columns(len(columns))
+col_inputs = st.columns(len(columns))
 
-for idx, col in enumerate(columns):
-    user_input = search_inputs[idx].text_input(f"{col}", key=f"filter_{col}")
+for i, col in enumerate(columns):
+    user_input = col_inputs[i].text_input(f"{col}", key=f"col_search_{col}")
     if user_input:
-        filtered_df = filtered_df[filtered_df[col].astype(str).str.contains(user_input, case=False, na=False)]
+        filtered_df = filtered_df[
+            filtered_df[col].astype(str).str.contains(user_input, case=False, na=False)
+        ]
 
-# Заменить NaN на прочерк
-filtered_df = filtered_df.fillna("–")
+# 📌 Заменить пустые строки и NaN на прочерк
+filtered_df.replace("", "–", inplace=True)
+filtered_df.fillna("–", inplace=True)
 
-# Добавить колонку с нумерацией (с 1)
+# 🔢 Добавить нумерацию с 1
 filtered_df.reset_index(drop=True, inplace=True)
 filtered_df.index = filtered_df.index + 1
 filtered_df.index.name = "№"
 
-# Отображение таблицы
+# 📊 Отображение
 st.dataframe(filtered_df, use_container_width=True, height=600)
 
-# Скачивание
+# 💾 Скачать как CSV
 st.download_button(
-    label="💾 Скачать CSV",
+    label="💾 Скачать таблицу",
     data=filtered_df.reset_index().to_csv(index=False).encode('utf-8-sig'),
-    file_name="sjr_quartiles_table.csv",
+    file_name="sjr_quartiles_2022_2024.csv",
     mime="text/csv"
 )
