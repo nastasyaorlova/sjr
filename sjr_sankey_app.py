@@ -128,13 +128,12 @@ fig = go.Figure(go.Sankey(
 
 fig.update_layout(
     title_text="Изменение квартилей SJR (2022–2024)",
-    title_x=0.5,  # Центрируем заголовок
+    title_x=0.5,
     font_size=18,
     height=1000,
     width=1800,
     plot_bgcolor='rgba(250, 250, 250, 0.9)',
-    margin=dict(l=10, r=0, t=150, b=30)  # поднято вверх
+    margin=dict(l=10, r=0, t=150, b=30)
 )
 
-# Отображение в Streamlit
 st.plotly_chart(fig, use_container_width=True)
