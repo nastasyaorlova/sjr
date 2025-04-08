@@ -175,94 +175,32 @@ with st.expander("ℹ️ О диаграмме"):
 # 📊 ДОБАВЛЯЕМ ИНТЕРАКТИВНУЮ ТАБЛИЦУ
 # -------------------------------
 
-st.markdown("### 📋 Таблица: квартиль по годам для каждого журнала")
+# -------------------------------
+# 📊 ДОБАВЛЯЕМ ПОИСК ПО СТОЛБЦАМ
+# -------------------------------
 
-cols = ['Sourceid', 'Title', 'Issn', 'Publisher', 'SJR Best Quartile', 'Areas']
-df_2022_full = pd.read_csv('2022.csv', sep=';', usecols=cols).assign(Year=2022)
-df_2023_full = pd.read_csv('2023.csv', sep=';', usecols=cols).assign(Year=2023)
-df_2024_full = pd.read_csv('2024.csv', sep=';', usecols=cols).assign(Year=2024)
+st.markdown("### 🔎 Поиск по каждому столбцу")
 
-df_full = pd.concat([df_2022_full, df_2023_full, df_2024_full], ignore_index=True)
-
-df_full.rename(columns={
-    'Sourceid': 'Journal ID',
-    'SJR Best Quartile': 'Quartile'
-}, inplace=True)
-df_full['Quartile'] = df_full['Quartile'].str.upper().str.replace(' ', '')
-
-# Построение широкой таблицы
-pivot_df = df_full.pivot_table(
-    index=['Journal ID', 'Title', 'Issn', 'Publisher', 'Areas'],
-    columns='Year',
-    values='Quartile',
-    aggfunc='first'
-).reset_index()
-
-pivot_df.columns.name = None
-pivot_df.rename(columns={
-    2022: 'Best Q 2022',
-    2023: 'Best Q 2023',
-    2024: 'Best Q 2024'
-}, inplace=True)
-
-final_columns = [
-    'Journal ID', 'Title', 'Issn', 'Publisher',
-    'Best Q 2022', 'Best Q 2023', 'Best Q 2024',
-    'Areas'
-]
-pivot_df = pivot_df[final_columns]
-
-# -------------------------
-# 🔍 Фильтрация по каждому столбцу
-# -------------------------
-
-st.markdown("### 🔎 Фильтрация по столбцам")
-
+# Копия таблицы
 filtered_df = pivot_df.copy()
 
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    selected_areas = st.multiselect(
-        "Области (Areas)",
-        options=sorted(filtered_df['Areas'].dropna().unique()),
-        default=sorted(filtered_df['Areas'].dropna().unique())
-    )
-with col2:
-    selected_quartile = st.multiselect(
-        "Best Q 2024",
-        options=sorted(filtered_df['Best Q 2024'].dropna().unique()),
-        default=sorted(filtered_df['Best Q 2024'].dropna().unique())
-    )
-with col3:
-    selected_publisher = st.multiselect(
-        "Издатель (Publisher)",
-        options=sorted(filtered_df['Publisher'].dropna().unique()),
-        default=sorted(filtered_df['Publisher'].dropna().unique())
-    )
-
-filtered_df = filtered_df[
-    (filtered_df['Areas'].isin(selected_areas)) &
-    (filtered_df['Best Q 2024'].isin(selected_quartile)) &
-    (filtered_df['Publisher'].isin(selected_publisher))
-]
-
-# Глобальный поиск
-search = st.text_input("🔍 Глобальный поиск по всей таблице:")
-if search:
-    filtered_df = filtered_df[filtered_df.apply(lambda row: search.lower() in row.astype(str).str.lower().to_string(), axis=1)]
+# Создаем 1 поле ввода на каждый столбец
+for column in filtered_df.columns:
+    user_input = st.text_input(f"Поиск по «{column}»", value="", key=column)
+    if user_input:
+        filtered_df = filtered_df[filtered_df[column].astype(str).str.contains(user_input, case=False, na=False)]
 
 # 🔁 Заменяем NaN/None на "–"
 filtered_df = filtered_df.fillna("–")
 
-# Таблица
+# Показываем таблицу
 st.dataframe(filtered_df, use_container_width=True, height=600)
 
 # Кнопка для скачивания
 st.download_button(
-    label="💾 Скачать как CSV",
+    label="💾 Скачать таблицу",
     data=filtered_df.to_csv(index=False).encode('utf-8-sig'),
-    file_name="sjr_table_2022_2024.csv",
+    file_name="sjr_filtered_table.csv",
     mime="text/csv"
 )
 
