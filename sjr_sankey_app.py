@@ -166,85 +166,66 @@ with st.expander("ℹ️ О диаграмме"):
 
     Ширина потоков между блоками отражает количество журналов, перешедших между квартилями.
     """)
+# -------------------------------
+# 📊 ДОБАВЛЯЕМ ТАБЛИЦУ ПОД ДИАГРАММОЙ
+# -------------------------------
 
+st.markdown("### 📋 Таблица: квартиль по годам для каждого журнала")
 
-import streamlit as st
-import pandas as pd
-
-# Настройка страницы
-st.set_page_config(
-    page_title="Квартиль SJR по годам",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
-
-st.markdown("<h1 style='text-align: center;'>📊 Квартиль журналов SJR (2022–2024)</h1>", unsafe_allow_html=True)
-
-# Колонки, которые мы хотим загрузить
+# Загружаем все нужные столбцы заново
 cols = ['Sourceid', 'Title', 'Issn', 'Publisher', 'SJR Best Quartile', 'Areas']
+df_2022_full = pd.read_csv('2022.csv', sep=';', usecols=cols).assign(Year=2022)
+df_2023_full = pd.read_csv('2023.csv', sep=';', usecols=cols).assign(Year=2023)
+df_2024_full = pd.read_csv('2024.csv', sep=';', usecols=cols).assign(Year=2024)
 
-# Загрузка и объединение файлов
-@st.cache_data
-def load_data():
-    df_2022 = pd.read_csv('2022.csv', sep=';', usecols=cols).assign(Year=2022)
-    df_2023 = pd.read_csv('2023.csv', sep=';', usecols=cols).assign(Year=2023)
-    df_2024 = pd.read_csv('2024.csv', sep=';', usecols=cols).assign(Year=2024)
+# Объединяем
+df_full = pd.concat([df_2022_full, df_2023_full, df_2024_full], ignore_index=True)
 
-    df_all = pd.concat([df_2022, df_2023, df_2024], ignore_index=True)
+# Приводим в порядок
+df_full.rename(columns={
+    'Sourceid': 'Journal ID',
+    'SJR Best Quartile': 'Quartile'
+}, inplace=True)
+df_full['Quartile'] = df_full['Quartile'].str.upper().str.replace(' ', '')
 
-    df_all.rename(columns={
-        'Sourceid': 'Journal ID',
-        'SJR Best Quartile': 'Quartile'
-    }, inplace=True)
+# Строим широкую таблицу
+pivot_df = df_full.pivot_table(
+    index=['Journal ID', 'Title', 'Issn', 'Publisher', 'Areas'],
+    columns='Year',
+    values='Quartile',
+    aggfunc='first'
+).reset_index()
 
-    df_all['Quartile'] = df_all['Quartile'].str.upper().str.replace(' ', '')
+pivot_df.columns.name = None
+pivot_df.rename(columns={
+    2022: 'Best Q 2022',
+    2023: 'Best Q 2023',
+    2024: 'Best Q 2024'
+}, inplace=True)
 
-    pivot = df_all.pivot_table(
-        index=['Journal ID', 'Title', 'Issn', 'Publisher', 'Areas'],
-        columns='Year',
-        values='Quartile',
-        aggfunc='first'
-    ).reset_index()
+# Порядок колонок
+final_columns = [
+    'Journal ID', 'Title', 'Issn', 'Publisher',
+    'Best Q 2022', 'Best Q 2023', 'Best Q 2024',
+    'Areas'
+]
+pivot_df = pivot_df[final_columns]
 
-    pivot.columns.name = None
-    pivot.rename(columns={
-        2022: 'Best Q 2022',
-        2023: 'Best Q 2023',
-        2024: 'Best Q 2024'
-    }, inplace=True)
-
-    # Финальный порядок колонок
-    final_columns = [
-        'Journal ID', 'Title', 'Issn', 'Publisher',
-        'Best Q 2022', 'Best Q 2023', 'Best Q 2024',
-        'Areas'
-    ]
-    pivot = pivot[final_columns]
-
-    return pivot
-
-df = load_data()
-
-# 🔎 Глобальный поиск
-search_term = st.text_input("🔍 Поиск по таблице (по всем полям):")
-
-if search_term:
-    df_filtered = df[df.apply(lambda row: search_term.lower() in row.astype(str).str.lower().to_string(), axis=1)]
+# Глобальный поиск
+search = st.text_input("🔍 Поиск по таблице (по всем полям):")
+if search:
+    filtered_df = pivot_df[pivot_df.apply(lambda row: search.lower() in row.astype(str).str.lower().to_string(), axis=1)]
 else:
-    df_filtered = df
+    filtered_df = pivot_df
 
-# Отображаем таблицу
-st.dataframe(
-    df_filtered,
-    use_container_width=True,
-    height=600
-)
+# Отображаем
+st.dataframe(filtered_df, use_container_width=True, height=600)
 
-# (Опционально) Кнопка для скачивания
+# Кнопка для скачивания
 st.download_button(
-    label="💾 Скачать как Excel",
-    data=df_filtered.to_csv(index=False).encode('utf-8-sig'),
-    file_name="sjr_quartiles_2022_2024.csv",
+    label="💾 Скачать таблицу в CSV",
+    data=filtered_df.to_csv(index=False).encode('utf-8-sig'),
+    file_name="sjr_quartiles_table.csv",
     mime="text/csv"
 )
 
