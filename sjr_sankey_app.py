@@ -134,7 +134,7 @@ fig = go.Figure(go.Sankey(
 ))
 
 fig.update_layout(
-    height=900,
+    height=1500,
     plot_bgcolor='rgba(250, 250, 250, 0.9)',
     margin=dict(l=20, r=20, t=10, b=10),
     autosize=True
