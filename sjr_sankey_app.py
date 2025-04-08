@@ -172,35 +172,70 @@ with st.expander("ℹ️ О диаграмме"):
 
 # ДОБАВЛЯЕМ ТАБЛИЦУ ПОД ДИАГРАММОЙ
 # -------------------------------
-# 📊 ДОБАВЛЯЕМ ИНТЕРАКТИВНУЮ ТАБЛИЦУ
-# -------------------------------
+#import streamlit as st
+import pandas as pd
 
-# -------------------------------
-# 📊 ДОБАВЛЯЕМ ПОИСК ПО СТОЛБЦАМ
-# -------------------------------
+# Настройка страницы
+st.set_page_config(page_title="Таблица SJR", layout="wide")
 
-st.markdown("### 🔎 Поиск по каждому столбцу")
+st.markdown("<h1 style='text-align: center;'>📋 Таблица квартилей SJR (2022–2024)</h1>", unsafe_allow_html=True)
 
-# Копия таблицы
+# Загрузка и объединение
+cols = ['Sourceid', 'Title', 'Issn', 'Publisher', 'SJR Best Quartile', 'Areas']
+
+df_2022 = pd.read_csv('2022.csv', sep=';', usecols=cols).assign(Year=2022)
+df_2023 = pd.read_csv('2023.csv', sep=';', usecols=cols).assign(Year=2023)
+df_2024 = pd.read_csv('2024.csv', sep=';', usecols=cols).assign(Year=2024)
+
+df_all = pd.concat([df_2022, df_2023, df_2024], ignore_index=True)
+
+# Переименование и подготовка
+df_all.rename(columns={
+    'Sourceid': 'Journal ID',
+    'SJR Best Quartile': 'Quartile'
+}, inplace=True)
+
+df_all['Quartile'] = df_all['Quartile'].str.upper().str.replace(' ', '')
+
+# Пивот в широкую таблицу
+pivot_df = df_all.pivot_table(
+    index=['Journal ID', 'Title', 'Issn', 'Publisher', 'Areas'],
+    columns='Year',
+    values='Quartile',
+    aggfunc='first'
+).reset_index()
+
+pivot_df.columns.name = None
+pivot_df.rename(columns={
+    2022: 'Best Q 2022',
+    2023: 'Best Q 2023',
+    2024: 'Best Q 2024'
+}, inplace=True)
+
+# Финальный порядок колонок
+pivot_df = pivot_df[
+    ['Journal ID', 'Title', 'Issn', 'Publisher', 'Best Q 2022', 'Best Q 2023', 'Best Q 2024', 'Areas']
+]
+
+# 🔎 Поиск по каждому столбцу
+st.markdown("### 🔍 Поиск по каждому столбцу")
 filtered_df = pivot_df.copy()
 
-# Создаем 1 поле ввода на каждый столбец
 for column in filtered_df.columns:
     user_input = st.text_input(f"Поиск по «{column}»", value="", key=column)
     if user_input:
         filtered_df = filtered_df[filtered_df[column].astype(str).str.contains(user_input, case=False, na=False)]
 
-# 🔁 Заменяем NaN/None на "–"
+# 🔁 Заменить пустые значения на прочерк
 filtered_df = filtered_df.fillna("–")
 
-# Показываем таблицу
+# Показать таблицу
 st.dataframe(filtered_df, use_container_width=True, height=600)
 
-# Кнопка для скачивания
+# Скачивание
 st.download_button(
-    label="💾 Скачать таблицу",
+    label="💾 Скачать CSV",
     data=filtered_df.to_csv(index=False).encode('utf-8-sig'),
     file_name="sjr_filtered_table.csv",
     mime="text/csv"
 )
-
