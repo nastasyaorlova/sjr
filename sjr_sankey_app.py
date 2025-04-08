@@ -171,7 +171,52 @@ with st.expander("ℹ️ О диаграмме"):
     """)
 
 # ДОБАВЛЯЕМ ТАБЛИЦУ ПОД ДИАГРАММОЙ
+
 # -------------------------------
+# 📊 ДОБАВЛЯЕМ ТАБЛИЦУ ПОД ДИАГРАММОЙ
+# -------------------------------
+
+st.markdown("### 📋 Таблица: квартиль по годам для каждого журнала")
+
+# Загружаем все нужные столбцы заново
+cols = ['Sourceid', 'Title', 'Issn', 'Publisher', 'SJR Best Quartile', 'Areas']
+df_2022_full = pd.read_csv('2022.csv', sep=';', usecols=cols).assign(Year=2022)
+df_2023_full = pd.read_csv('2023.csv', sep=';', usecols=cols).assign(Year=2023)
+df_2024_full = pd.read_csv('2024.csv', sep=';', usecols=cols).assign(Year=2024)
+
+# Объединяем
+df_full = pd.concat([df_2022_full, df_2023_full, df_2024_full], ignore_index=True)
+
+# Приводим в порядок
+df_full.rename(columns={
+    'Sourceid': 'Journal ID',
+    'SJR Best Quartile': 'Quartile'
+}, inplace=True)
+df_full['Quartile'] = df_full['Quartile'].str.upper().str.replace(' ', '')
+
+# Строим широкую таблицу
+pivot_df = df_full.pivot_table(
+    index=['Journal ID', 'Title', 'Issn', 'Publisher', 'Areas'],
+    columns='Year',
+    values='Quartile',
+    aggfunc='first'
+).reset_index()
+
+pivot_df.columns.name = None
+pivot_df.rename(columns={
+    2022: 'Best Q 2022',
+    2023: 'Best Q 2023',
+    2024: 'Best Q 2024'
+}, inplace=True)
+
+# Порядок колонок
+final_columns = [
+    'Journal ID', 'Title', 'Issn', 'Publisher',
+    'Best Q 2022', 'Best Q 2023', 'Best Q 2024',
+    'Areas'
+]
+pivot_df = pivot_df[final_columns]
+
 # Глобальный поиск
 search = st.text_input("🔍 Поиск по таблице (по всем полям):")
 if search:
@@ -179,8 +224,14 @@ if search:
 else:
     filtered_df = pivot_df
 
-# 🔁 Заменяем пустые значения на прочерк
-filtered_df = filtered_df.fillna("–")
-
 # Отображаем
 st.dataframe(filtered_df, use_container_width=True, height=600)
+
+# Кнопка для скачивания
+st.download_button(
+    label="💾 Скачать таблицу в CSV",
+    data=filtered_df.to_csv(index=False).encode('utf-8-sig'),
+    file_name="sjr_quartiles_table.csv",
+    mime="text/csv"
+)
+
