@@ -175,25 +175,27 @@ with st.expander("ℹ️ О диаграмме"):
 import streamlit as st
 import pandas as pd
 
-# 📄 Настройка страницы
+# ✅ ОБЯЗАТЕЛЬНО ПЕРВОЙ СТРОКОЙ!
 st.set_page_config(page_title="Таблица квартилей SJR", layout="wide")
+
+# Заголовок страницы
 st.markdown("<h1 style='text-align: center;'>📋 Таблица квартилей SJR (2022–2024)</h1>", unsafe_allow_html=True)
 
-# 📁 Загрузка файлов
+# Загрузка данных
 cols = ['Sourceid', 'Title', 'Issn', 'Publisher', 'SJR Best Quartile', 'Areas']
 df_2022 = pd.read_csv('2022.csv', sep=';', usecols=cols).assign(Year=2022)
 df_2023 = pd.read_csv('2023.csv', sep=';', usecols=cols).assign(Year=2023)
 df_2024 = pd.read_csv('2024.csv', sep=';', usecols=cols).assign(Year=2024)
 
-# 🔗 Объединение
+# Объединение
 df_all = pd.concat([df_2022, df_2023, df_2024], ignore_index=True)
 df_all.rename(columns={'Sourceid': 'Journal ID', 'SJR Best Quartile': 'Quartile'}, inplace=True)
 df_all['Quartile'] = df_all['Quartile'].str.upper().str.replace(' ', '')
 
-# 🧠 Метаданные (по одному журналу)
+# Метаданные (первая запись по журналу)
 meta = df_all.sort_values('Year').groupby('Journal ID', as_index=False).first()
 
-# 📊 Pivot-квартиль по годам
+# Pivot-квартиль по годам
 pivot = df_all.pivot(index='Journal ID', columns='Year', values='Quartile').reset_index()
 pivot.rename(columns={
     2022: 'Best Q 2022',
@@ -201,20 +203,17 @@ pivot.rename(columns={
     2024: 'Best Q 2024'
 }, inplace=True)
 
-# 🔄 Объединяем
+# Объединяем
 df_final = pd.merge(meta, pivot, on='Journal ID', how='left')
 
-# 🎯 Финальные колонки
+# Финальный порядок колонок
 df_final = df_final[[
     'Journal ID', 'Title', 'Issn', 'Publisher',
     'Best Q 2022', 'Best Q 2023', 'Best Q 2024',
     'Areas'
 ]]
 
-# ----------------------------
-# 🔍 Глобальный и постолбцовый поиск
-# ----------------------------
-
+# 🔍 Глобальный поиск
 st.markdown("### 🔍 Глобальный поиск")
 global_search = st.text_input("Поиск по всем полям:")
 
@@ -224,20 +223,21 @@ if global_search:
         filtered_df.apply(lambda row: global_search.lower() in row.astype(str).str.lower().to_string(), axis=1)
     ]
 
-st.markdown("### 🔎 Поиск по столбцам")
-cols = filtered_df.columns.tolist()
-search_cols = st.columns(len(cols))
+# 🔎 Поиск по каждому столбцу
+st.markdown("### 🔎 Поиск по каждому столбцу")
+col_names = filtered_df.columns.tolist()
+col_search_inputs = st.columns(len(col_names))
 
-for i, col in enumerate(cols):
-    val = search_cols[i].text_input(f"{col}", key=f"search_{col}")
+for i, col in enumerate(col_names):
+    val = col_search_inputs[i].text_input(f"{col}", key=f"search_{col}")
     if val:
         filtered_df = filtered_df[filtered_df[col].astype(str).str.contains(val, case=False, na=False)]
 
-# 🔁 Пустые значения → прочерк
+# 🧼 Заменить пустые и NaN на прочерк
 filtered_df.replace("", "–", inplace=True)
 filtered_df.fillna("–", inplace=True)
 
-# 🔢 Нумерация с 1
+# 🔢 Добавить нумерацию с 1
 filtered_df.reset_index(drop=True, inplace=True)
 filtered_df.index = filtered_df.index + 1
 filtered_df.index.name = "№"
@@ -245,7 +245,7 @@ filtered_df.index.name = "№"
 # 📊 Отображение таблицы
 st.dataframe(filtered_df, use_container_width=True, height=600)
 
-# 📥 Скачивание
+# 💾 Скачивание
 st.download_button(
     label="💾 Скачать CSV",
     data=filtered_df.reset_index().to_csv(index=False).encode('utf-8-sig'),
