@@ -112,7 +112,7 @@ links_df = pd.DataFrame(sankey_links)
 links_df = links_df.groupby(['source', 'target', 'color']).agg({'value': 'sum'}).reset_index()
 links_df = links_df.sort_values('value', ascending=False)
 
-# Построение Sankey-диаграммы
+# Построение Sankey-диаграммы с отключенными hover-подсказками
 fig = go.Figure(go.Sankey(
     arrangement="fixed",
     node=dict(
@@ -122,14 +122,15 @@ fig = go.Figure(go.Sankey(
         label=all_nodes,
         color=node_colors,
         x=node_x,
-        y=node_y
+        y=node_y,
+        hoverinfo="none"  # Отключаем hover для узлов
     ),
     link=dict(
         source=links_df['source'],
         target=links_df['target'],
         value=links_df['value'],
         color=links_df['color'],
-        hoverinfo='none'  # Отключаем всплывающие подсказки
+        hoverinfo="none"  # Отключаем hover для связей
     )
 ))
 
@@ -146,11 +147,9 @@ fig.update_layout(
     # Ширина будет автоматически подстраиваться под Streamlit
     plot_bgcolor='rgba(250, 250, 250, 0.9)',
     margin=dict(l=20, r=20, t=80, b=20),  # Уменьшаем отступы
-    autosize=True        # Позволяем Streamlit автоматически масштабировать график
+    autosize=True,       # Позволяем Streamlit автоматически масштабировать график
+    hovermode=False      # Глобально отключаем режим наведения
 )
-
-# Отключаем все hover-эффекты глобально
-fig.update_traces(hoverinfo="skip", hovertemplate=None)
 
 # Создаем контейнер на всю ширину для диаграммы
 container = st.container()
