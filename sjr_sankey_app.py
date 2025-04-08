@@ -44,15 +44,15 @@ for node in nodes:
         node_x.append(0.9)
 
     if "Без квартиля" in node:
-        node_y.append(1.0)
+        node_y.append(1.2)
     elif "Q1" in node:
         node_y.append(0.1)
     elif "Q2" in node:
         node_y.append(0.3)
     elif "Q3" in node:
-        node_y.append(0.6)
+        node_y.append(0.58)  # немного выше
     elif "Q4" in node:
-        node_y.append(0.8)
+        node_y.append(0.9) 
 
 links = {'source': [], 'target': [], 'value': [], 'color': []}
 all_ids = df['Journal ID'].unique()
