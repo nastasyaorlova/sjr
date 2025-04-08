@@ -61,17 +61,16 @@ for node in all_nodes:
     elif year_str == "2024":
         node_x.append(0.85)  # Сдвинуто влево от правого края
     
-    # Лучшее распределение по вертикали
     if "Без квартиля" in node:
-        node_y.append(0.92)  # Чуть ниже для лучшей видимости
+        node_y.append(1.08)
     elif "Q1" in node:
         node_y.append(0.15)
     elif "Q2" in node:
-        node_y.append(0.35)
+        node_y.append(0.3)
     elif "Q3" in node:
-        node_y.append(0.58)
+        node_y.append(0.5)
     elif "Q4" in node:
-        node_y.append(0.78)
+        node_y.append(0.83)
 
 # Подготовка связей
 sankey_links = {'source': [], 'target': [], 'value': [], 'color': []}
