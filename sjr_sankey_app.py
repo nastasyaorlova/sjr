@@ -171,31 +171,22 @@ with st.expander("ℹ️ О диаграмме"):
     """)
 
 # ДОБАВЛЯЕМ ТАБЛИЦУ ПОД ДИАГРАММОЙ
-
 # -------------------------------
-# -------------------------------
-# 📊 ДОБАВЛЯЕМ ТАБЛИЦУ ПОД ДИАГРАММОЙ
+# 📋 ТАБЛИЦА: SJR с поиском и нумерацией
 # -------------------------------
 
 st.markdown("### 📋 Таблица: квартиль по годам для каждого журнала")
 
-# Загружаем все нужные столбцы заново
+# Загружаем
 cols = ['Sourceid', 'Title', 'Issn', 'Publisher', 'SJR Best Quartile', 'Areas']
 df_2022_full = pd.read_csv('2022.csv', sep=';', usecols=cols).assign(Year=2022)
 df_2023_full = pd.read_csv('2023.csv', sep=';', usecols=cols).assign(Year=2023)
 df_2024_full = pd.read_csv('2024.csv', sep=';', usecols=cols).assign(Year=2024)
 
-# Объединяем
 df_full = pd.concat([df_2022_full, df_2023_full, df_2024_full], ignore_index=True)
-
-# Приводим в порядок
-df_full.rename(columns={
-    'Sourceid': 'Journal ID',
-    'SJR Best Quartile': 'Quartile'
-}, inplace=True)
+df_full.rename(columns={'Sourceid': 'Journal ID', 'SJR Best Quartile': 'Quartile'}, inplace=True)
 df_full['Quartile'] = df_full['Quartile'].str.upper().str.replace(' ', '')
 
-# Строим широкую таблицу
 pivot_df = df_full.pivot_table(
     index=['Journal ID', 'Title', 'Issn', 'Publisher', 'Areas'],
     columns='Year',
@@ -210,48 +201,48 @@ pivot_df.rename(columns={
     2024: 'Best Q 2024'
 }, inplace=True)
 
-# Порядок колонок
-final_columns = [
+# Финальные колонки
+pivot_df = pivot_df[[
     'Journal ID', 'Title', 'Issn', 'Publisher',
     'Best Q 2022', 'Best Q 2023', 'Best Q 2024',
     'Areas'
-]
-pivot_df = pivot_df[final_columns]
+]]
 
-# --------------------------
-# 🔎 Глобальный и по-столбцам поиск
-# --------------------------
-
-st.markdown("#### 🔍 Поиск по всей таблице и по отдельным столбцам")
-
-# Сначала глобальный поиск
-global_search = st.text_input("Глобальный поиск по всем полям:")
+# Глобальный поиск (сначала!)
+st.markdown("#### 🔍 Глобальный поиск по всей таблице")
+global_search = st.text_input("Введите текст для поиска по всем полям:")
 
 filtered_df = pivot_df.copy()
-
 if global_search:
     filtered_df = filtered_df[
         filtered_df.apply(lambda row: global_search.lower() in row.astype(str).str.lower().to_string(), axis=1)
     ]
 
-# Теперь фильтрация по каждому столбцу
-for column in filtered_df.columns:
-    col_search = st.text_input(f"Поиск по «{column}»", key=f"search_{column}")
-    if col_search:
-        filtered_df = filtered_df[
-            filtered_df[column].astype(str).str.contains(col_search, case=False, na=False)
-        ]
+# Поиск по каждому столбцу — горизонтально
+st.markdown("#### 🔎 Поиск по столбцам")
+columns = filtered_df.columns.tolist()
+search_inputs = st.columns(len(columns))
 
-# 🔁 Заменяем NaN на прочерк
+for idx, col in enumerate(columns):
+    user_input = search_inputs[idx].text_input(f"{col}", key=f"filter_{col}")
+    if user_input:
+        filtered_df = filtered_df[filtered_df[col].astype(str).str.contains(user_input, case=False, na=False)]
+
+# Заменить NaN на прочерк
 filtered_df = filtered_df.fillna("–")
+
+# Добавить колонку с нумерацией (с 1)
+filtered_df.reset_index(drop=True, inplace=True)
+filtered_df.index = filtered_df.index + 1
+filtered_df.index.name = "№"
 
 # Отображение таблицы
 st.dataframe(filtered_df, use_container_width=True, height=600)
 
-# Кнопка для скачивания
+# Скачивание
 st.download_button(
-    label="💾 Скачать таблицу в CSV",
-    data=filtered_df.to_csv(index=False).encode('utf-8-sig'),
+    label="💾 Скачать CSV",
+    data=filtered_df.reset_index().to_csv(index=False).encode('utf-8-sig'),
     file_name="sjr_quartiles_table.csv",
     mime="text/csv"
 )
